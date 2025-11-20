@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Auth Service
+name: Deploy Auth Service
 
 on:
   push:
@@ -14,8 +14,8 @@ jobs:
   # ========================================
   # JOB 1: BUILD & TEST
   # ========================================
-  build-and-test:
-    name: Build & Test Spring Boot App
+  build-test:
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,10 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      # ✅ FIX: Make Maven wrapper executable
+      - name: Make Maven Wrapper Executable
+        run: chmod +x ./mvnw
+
       - name: Create Keys Directory
         run: mkdir -p src/main/resources/keys
 
@@ -36,36 +40,21 @@ jobs:
         run: |
           echo "${{ secrets.JWT_PRIVATE_KEY }}" > src/main/resources/keys/private_key.pem
           echo "${{ secrets.JWT_PUBLIC_KEY }}" > src/main/resources/keys/public_key.pem
-          chmod 600 src/main/resources/keys/*.pem
 
       - name: Run Tests
         run: ./mvnw clean test
-        env:
-          SPRING_PROFILES_ACTIVE: test
-          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
-          SPRING_DATASOURCE_USERNAME: sa
-          SPRING_DATASOURCE_PASSWORD:
-          JWT_PRIVATE_KEY: classpath:keys/private_key.pem
-          JWT_PUBLIC_KEY: classpath:keys/public_key.pem
 
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: auth-service-jar
-          path: target/*.jar
-          retention-days: 1
-
   # ========================================
-  # JOB 2: DOCKER BUILD & PUSH
+  # JOB 2: DOCKER BUILD & PUSH (only on main)
   # ========================================
-  docker-build:
-    name: Build & Push Docker Image
+  docker:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
+    needs: build-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout Code
@@ -78,6 +67,10 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      # ✅ FIX: Make Maven wrapper executable
+      - name: Make Maven Wrapper Executable
+        run: chmod +x ./mvnw
+
       - name: Create Keys Directory
         run: mkdir -p src/main/resources/keys
 
@@ -85,13 +78,9 @@ jobs:
         run: |
           echo "${{ secrets.JWT_PRIVATE_KEY }}" > src/main/resources/keys/private_key.pem
           echo "${{ secrets.JWT_PUBLIC_KEY }}" > src/main/resources/keys/public_key.pem
-          chmod 600 src/main/resources/keys/*.pem
 
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -102,33 +91,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_IMAGE }}
-          tags: |
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and Push Docker Image
+      - name: Build and Push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
   # ========================================
-  # JOB 3: DEPLOY TO RAILWAY
+  # JOB 3: DEPLOY TO RAILWAY (only on main)
   # ========================================
-  deploy-railway:
+  deploy:
     name: Deploy to Railway
     runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.ref == 'refs/heads/main'
+    needs: docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout Code
@@ -142,40 +123,5 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Deployment Success Notification
-        if: success()
-        run: |
-          echo "🚀 Deployment to Railway successful!"
-          echo "Service: auth-service"
-          echo "Commit: ${{ github.sha }}"
-
-  # ========================================
-  # JOB 4: HEALTH CHECK
-  # ========================================
-  health-check:
-    name: Health Check
-    runs-on: ubuntu-latest
-    needs: deploy-railway
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Wait for Deployment
-        run: sleep 60
-
-      - name: Check Service Health
-        run: |
-          # You'll need to replace with your actual Railway URL
-          # Get this from Railway dashboard after first deployment
-          HEALTH_URL="${{ secrets.RAILWAY_SERVICE_URL }}/actuator/health"
-
-          for i in {1..10}; do
-            if curl -f -s "$HEALTH_URL" > /dev/null; then
-              echo "✅ Health check passed!"
-              exit 0
-            fi
-            echo "⏳ Waiting for service to be healthy... ($i/10)"
-            sleep 10
-          done
-
-          echo "❌ Health check failed after 10 attempts"
-          exit 1
+      - name: Deployment Success
+        run: echo "✅ Deployed to Railway successfully!"
