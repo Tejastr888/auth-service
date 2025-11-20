@@ -8,6 +8,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+#hello
 
 logging:
   level:
