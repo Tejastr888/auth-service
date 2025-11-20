@@ -119,9 +119,10 @@ jobs:
         run: npm i -g @railway/cli
 
       - name: Deploy to Railway
-        run: railway up --service auth-service
+        run: |
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up --service auth-service
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
       - name: Deployment Success
         run: echo "✅ Deployed to Railway successfully!"
