@@ -1,0 +1,54 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Documentation ###
+*.md
+!README.md
+!HELP.md
+
+### Environment & Secrets ###
+.env
+.env.*
+!.env.example
+!.env.docker
+.env.local
+.env.*.local
+
+### RSA Keys & Certificates ###
+src/main/resources/keys/*.pem
+!src/main/resources/keys/.gitkeep
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

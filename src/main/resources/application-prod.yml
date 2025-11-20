@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID}
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET}
+
+app:
+  oauth2:
+    authorized-redirect-uri: ${APP_OAUTH2_AUTHORIZED_REDIRECT_URI}
+
+jwt:
+  private-key: ${JWT_PRIVATE_KEY:classpath:keys/private_key.pem}
+  public-key: ${JWT_PUBLIC_KEY:classpath:keys/public_key.pem}
+
+logging:
+  level:
+    root: WARN
+    com.sportschaos.auth_service: INFO
+    org.springframework.security: WARN

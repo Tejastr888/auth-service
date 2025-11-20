@@ -1,0 +1,23 @@
+# This file ensures the keys/ directory is tracked by git
+
+# The actual .pem files are ignored by .gitignore (sensitive keys)
+
+#
+
+# To generate JWT RSA keys locally:
+
+#
+
+# 1. Generate private key:
+
+# openssl genrsa -out private_key.pem 2048
+
+#
+
+# 2. Generate public key from private key:
+
+# openssl rsa -in private_key.pem -pubout -out public_key.pem
+
+#
+
+# These commands should be run locally and keys kept private (never commit to git)
